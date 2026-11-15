@@ -12,14 +12,19 @@ hold, UP. Full deflection -> output 1.0 -> STRAFE 4.5 m/s (same as old keys).
 Jump: takeoff d=0.4m before gap edge -> t_jump=(7.6-z_edge)/6; range 4.64m.
 """
 import os
+import shutil
 import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 
-ADB = r"C:\Android\platform-tools\adb.exe"
-SER = "<LAN_IP>:5555"  # A57 WiFi (primary device); A54 = <LAN_IP>:5555
-BUILD = r"%USERPROFILE%\projects\godot-parkour\build"
+ADB = os.environ.get("ADB_PATH") or shutil.which("adb") or "adb"
+SER = os.environ.get("PARKOUR_ADB_SERIAL", "")  # adb serial or ip:port of target device
+BUILD = str(Path(__file__).resolve().parent.parent / "build")
+if not SER:
+    sys.exit("set PARKOUR_ADB_SERIAL to your adb serial or ip:port first")
+os.makedirs(BUILD, exist_ok=True)
 Z0_RESPAWN = 2.0  # fixed respawn = strip0 checkpoint z=2 (was spawn z=8 pre-fix)
 
 START = (540, 1260)
