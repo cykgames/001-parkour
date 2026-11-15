@@ -158,11 +158,17 @@ func _build_ui() -> void:
 	_restart_button.visible = false
 	add_child(_restart_button)
 
-	# Touch controls: jump key (bottom-right) — enlarged hit area, deep navy.
-	var tj := _mk_button("J", 80)
+	# Touch controls: jump key (bottom-right) — same footprint as the
+	# joystick disc (2*RADIUS = 330), circular to match the pad's look.
+	var tj := _mk_button("J", 96)
+	var jd := Joystick.RADIUS * 2.0
 	tj.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	tj.offset_left = -270; tj.offset_right = -30
-	tj.offset_top = -200; tj.offset_bottom = -22
+	tj.offset_left = -jd - 30; tj.offset_right = -30
+	tj.offset_top = -jd - 22; tj.offset_bottom = -22
+	for sn in ["normal", "pressed", "hover"]:
+		var sb: StyleBoxFlat = tj.get_theme_stylebox(sn)
+		sb.set_corner_radius_all(int(Joystick.RADIUS))
+		sb.set_border_width_all(4)
 	tj.button_down.connect(_on_jump_down); tj.button_up.connect(_on_jump_up)
 	add_child(tj)
 

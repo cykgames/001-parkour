@@ -5,7 +5,7 @@ LevelGen.gd (deterministic layout). Player auto-runs -Z at SPEED=6 from z=8.
 z(t) = 8 - 6*t  (t = seconds since START / since respawn).
 
 Controls (1080x2340 PORTRAIT, HUD v3 joystick): START(540,1260)
-JOY home(160,2146) J(953,2246) RESTART(540,1348) pause(842,30).
+JOY home(160,2146) J(915,2182) RESTART(540,1348) pause(842,30).
 Viewport 1280x2773 @ scale 0.84375 (canvas_items/expand, base 1280x720).
 Joystick: DOWN at home, MOVE to home+deflection (100px > 91px full travel),
 hold, UP. Full deflection -> output 1.0 -> STRAFE 4.5 m/s (same as old keys).
@@ -25,7 +25,7 @@ Z0_RESPAWN = 2.0  # fixed respawn = strip0 checkpoint z=2 (was spawn z=8 pre-fix
 START = (540, 1260)
 JOY = (160, 2146)   # joystick disc home center (screen px)
 JOY_R = 100         # deflection px; > 91px full travel -> clamped output 1.0
-J = (953, 2246)
+J = (915, 2182)  # 330x330 circular jump key, same size as joystick disc (HUD v4)
 RESTART = (540, 1348)
 PAUSE = (842, 30)
 LEAD = float(os.environ.get("W7_LEAD", "0.18"))  # compensate adb+input latency; tune for WiFi

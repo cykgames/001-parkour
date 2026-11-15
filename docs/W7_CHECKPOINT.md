@@ -118,6 +118,13 @@ Three real driver bugs found + fixed while verifying (NOT game bugs):
   - Full headless regression `build/headless_joy.log`: FINAL x3 34.34/36.89/37.49s, 0 falls, 25/25+27/27+28/28, 3 stars, ALL_LEVELS_DONE, 0 errors. Bugs caught+fixed en route: HUD connected signal `pressed` but Joystick declares `activated`; GDScript `is`+`and` loses type narrowing -> explicit `as` casts; new class_name needs one `--headless --import` to refresh the class cache.
   - Rendered frames of the REAL Main scene (windowed GL, `tools/shot_hud.tscn`): `build/hud_joy_idle/active/released.png` visually verified — idle no overlap, active blue knob deflected + run auto-starts, release springs back with no stuck input.
 - APK 28,323,440 bytes exported+signed -> A57 `install -r` **Success** (WiFi .118).
+
+## 14. HUD v4 — jump key same size as joystick disc (2026-11-15 ~13:35, user: 跳躍鍵和方向圓盤一樣大)
+
+- `HUD.gd`: J button 240x178 rounded-rect -> **330x330 circle** (= 2*Joystick.RADIUS; corner radius 165, rim 4px to match the disc). Size derived from `Joystick.RADIUS` so disc and jump stay in sync if the pad is resized later. Font 80->96. Margins unchanged (right 30, bottom 22).
+- `tools/w7_play.py`: J tap coords (953,2246) -> (915,2182) (new center at portrait scale 0.84375).
+- Verification: rendered `build/hud_joy_idle.png` — disc and J are equal 330px circles, no overlap with START or screen edges; headless `build/headless_hudv4.log` FINAL x3 34.34/36.89/37.49s, 0 falls, 25/25+27/27+28/28, 3 stars, BAD_LINES=0; APK exported+signed -> A57 `install -r` **Success** (WiFi .118).
+- On-device screenshot skipped: Discord in foreground (user actively on phone) — no launch/input sent. New HUD shows on next game open.
 - RED on-device play test BLOCKED: A57 was dozing + secure keyguard (mInputRestricted=true); the first scripted run's taps hit the keyguard (black screencaps, identical sha). Screen woken via KEYCODE_WAKEUP; secure lock NOT bypassed — needs the user to unlock.
 - Driver `tools/w7_play.py` v3: L/R holds -> `stick(dx,dy,ms)` drag-holds at JOY(160,2146) +/-100px (>91px full travel -> output 1.0 -> STRAFE 4.5, same displacement as old keys). Input events fire-and-forget + screencap threaded: blocking adb calls had desynced the dodge/jump schedule (2s screencap delayed left-stick + jump0). Added `a57_joy_dodge` shot at t=2.7 (knob deflection evidence).
 - Next after user unlocks A57: force-stop + monkey relaunch, `set W7_LEAD=0.15&& python tools/w7_play.py clean`, expect LEVEL CLEAR + FALLS 0 + deflection shot; then logcat scan (FATAL/ANR/SIGSEGV/SCRIPT ERROR).
