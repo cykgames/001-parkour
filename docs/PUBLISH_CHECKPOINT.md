@@ -43,3 +43,18 @@ Full git history rewritten with `git-filter-repo` (blob callback + path filter):
   attribution fix).
 - Released v0.1.0 APK predates the credit; a rebuild + new release is needed
   for it to show on devices (pending owner consent).
+
+## Docs review + credit dedup (2026-11-15, cykbot9)
+
+- Reviewed the cykbot1 handoff pass and kept it (useful for agent handoff);
+  fixed two factual errors it still carried: README said `landscape`
+  (device is portrait: `window/handheld/orientation=1`, W7 verified
+  1080x2340) and `user://progress.json` (001 actually saves
+  `user://parkour_save.json`, see Game.gd SAVE_PATH).
+- Deduped the in-game credit: HUD.gd had two "by cykbot9" labels (an
+  always-on bottom-center one + the title-gate `_author_label`). Kept the
+  title-gate label (auto-hides in start_run); removed the bottom-center one.
+- README known-state now notes the public v0.1.0 APK predates HUD v5-v7.
+- Verify after dedup: `build/verify_dedup.log` = FINAL x3 (GRASSLAND 34.35s,
+  CANYON 36.89s, FROST 37.49s), falls=0, all coins, 3 stars each,
+  ALL_LEVELS_DONE, no script errors.

@@ -6,7 +6,7 @@ on-device verified APK.
 
 - **Author**: cykbot9 (AI agent, cykagent fleet) under human direction
 - **Status**: playable, released as `v0.1.0` (public repo `cykgames/001-parkour`)
-- **Engine**: Godot 4.7.2 (GL Compatibility) · Android arm64-v8a, landscape
+- **Engine**: Godot 4.7.2 (GL Compatibility) · Android arm64-v8a, portrait
 
 ![gameplay](docs/screenshot.png)
 
@@ -78,8 +78,8 @@ Every wave was verified on real hardware before moving on. Full log in `docs/`.
 
 Start here when picking this game up:
 
-- **Entry**: `Main.tscn` → `Game.gd` (autoload: level index, progress in
-  `user://progress.json`) → `LevelGen.gd` (`LEVELS` data table builds the
+- **Entry**: `Main.tscn` → `Game.gd` (autoload: level index, best records in
+  `user://parkour_save.json`) → `LevelGen.gd` (`LEVELS` data table builds the
   course) → `Player.gd` (auto-run controller, coyote time + jump buffer;
   contains the headless waypoint bot used by the self-test).
 - **UI is all code**: `HUD.gd` builds every panel/button in `_build_ui()`
@@ -92,6 +92,9 @@ Start here when picking this game up:
   checkpoint-respawn bug (respawn skipping ahead) is fixed — respawn uses
   the last checkpoint actually stood on. Difficulty/par tuning from human
   play is still pending. Builds are debug-signed (no release keystore).
+  The public `v0.1.0` APK predates HUD v5–v7 (EXIT button, anchored
+  joystick, 1.5x hit radii) — repo HEAD is ahead of the release; re-export
+  before judging touch feel.
 - **Dev log**: `docs/` W1→W7 checkpoints + `PUBLISH_CHECKPOINT.md`
   (history sanitization record). Read these before changing physics or
   checkpoint logic.

@@ -125,18 +125,6 @@ func _build_ui() -> void:
 	_pause_button.pressed.connect(toggle_pause)
 	bar.add_child(_pause_button)
 
-	# Author credit (bottom-center, in the gap between joystick and jump key).
-	var credit := _mk_label("by cykbot9", 20)
-	credit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	credit.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
-	credit.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	credit.offset_left = -120.0
-	credit.offset_right = 120.0
-	credit.offset_top = -40.0
-	credit.offset_bottom = -12.0
-	credit.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(credit)
-
 	# Anchored joystick (bottom-left zone): swipe anywhere in the zone to
 	# strafe; the disc stays near home and only leans a little when the thumb
 	# goes wide. Full Vector2 output; Player consumes .x now, .y is reserved
