@@ -4,27 +4,34 @@ Schedules adb input events against an absolute clock. Geometry derived from
 LevelGen.gd (deterministic layout). Player auto-runs -Z at SPEED=6 from z=8.
 z(t) = 8 - 6*t  (t = seconds since START / since respawn).
 
-Buttons (1080x2340): START(540,1270) L(115,2245) R(285,2245) J(945,2245) pause(840,29).
+Controls (1080x2340 PORTRAIT, HUD v3 joystick): START(540,1260)
+JOY home(160,2146) J(953,2246) RESTART(540,1348) pause(842,30).
+Viewport 1280x2773 @ scale 0.84375 (canvas_items/expand, base 1280x720).
+Joystick: DOWN at home, MOVE to home+deflection (100px > 91px full travel),
+hold, UP. Full deflection -> output 1.0 -> STRAFE 4.5 m/s (same as old keys).
 Jump: takeoff d=0.4m before gap edge -> t_jump=(7.6-z_edge)/6; range 4.64m.
 """
 import os
 import subprocess
 import sys
+import threading
 import time
 
 ADB = r"C:\Android\platform-tools\adb.exe"
-SER = "<LAN_IP>:5555"  # WiFi transport (USB <DEVICE_SERIAL> also authorized)
+SER = "<LAN_IP>:5555"  # A57 WiFi (primary device); A54 = <LAN_IP>:5555
 BUILD = r"%USERPROFILE%\projects\godot-parkour\build"
 Z0_RESPAWN = 2.0  # fixed respawn = strip0 checkpoint z=2 (was spawn z=8 pre-fix)
 
-START = (540, 1270)
-L = (115, 2245)
-R = (285, 2245)
-J = (945, 2245)
-PAUSE = (840, 29)
+START = (540, 1260)
+JOY = (160, 2146)   # joystick disc home center (screen px)
+JOY_R = 100         # deflection px; > 91px full travel -> clamped output 1.0
+J = (953, 2246)
+RESTART = (540, 1348)
+PAUSE = (842, 30)
 LEAD = float(os.environ.get("W7_LEAD", "0.18"))  # compensate adb+input latency; tune for WiFi
 
 LOG = []
+_THREADS = []
 
 
 def _log(msg):
@@ -33,7 +40,13 @@ def _log(msg):
     print(line, flush=True)
 
 
-def sh(cmd):
+def sh(cmd, wait=True):
+    # wait=False: fire-and-forget so a slow WiFi adb round-trip never
+    # blocks the absolute-clock schedule (blocking calls desync dodges/jumps).
+    if not wait:
+        subprocess.Popen([ADB, "-s", SER, "shell", cmd],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return ""
     r = subprocess.run([ADB, "-s", SER, "shell", cmd],
                        capture_output=True, text=True)
     return r.stdout.strip()
@@ -42,21 +55,37 @@ def sh(cmd):
 def tap(pt):
     x, y = pt
     _log("tap %d %d" % (x, y))
-    sh("input tap %d %d" % (x, y))
+    sh("input tap %d %d" % (x, y), wait=False)
 
 
 def hold(pt, ms):
     x, y = pt
     _log("hold %d %d %dms" % (x, y, ms))
     sh("input motionevent DOWN %d %d; sleep %.3f; input motionevent UP %d %d"
-       % (x, y, ms / 1000.0, x, y))
+       % (x, y, ms / 1000.0, x, y), wait=False)
+
+
+def stick(dx, dy, ms):
+    """Deflect the floating joystick (dx,dy in -1..1) and hold for ms."""
+    x0, y0 = JOY
+    x1 = int(x0 + dx * JOY_R)
+    y1 = int(y0 + dy * JOY_R)
+    _log("stick %.2f %.2f %dms" % (dx, dy, ms))
+    sh("input motionevent DOWN %d %d; input motionevent MOVE %d %d; sleep %.3f; input motionevent UP %d %d"
+       % (x0, y0, x1, y1, ms / 1000.0, x1, y1), wait=False)
 
 
 def shot(name):
     p = BUILD + "\\" + name + ".png"
-    with open(p, "wb") as f:
-        subprocess.run([ADB, "-s", SER, "exec-out", "screencap", "-p"],
-                       stdout=f, check=True)
+
+    def _cap():
+        with open(p, "wb") as f:
+            subprocess.run([ADB, "-s", SER, "exec-out", "screencap", "-p"],
+                           stdout=f, check=True)
+
+    t = threading.Thread(target=_cap, daemon=True)
+    t.start()
+    _THREADS.append(t)
     _log("shot %s" % name)
     return p
 
@@ -94,8 +123,8 @@ def jump_t(z_edge, z0=8.0):
 
 def dodge(s, t_obst):
     """Strafe right around an x=0 obstacle centered at game-time t_obst."""
-    s.at(t_obst - 0.67, hold, R, 400)   # move to x~1.8 before obstacle
-    s.at(t_obst + 0.23, hold, L, 400)   # return to center after passing
+    s.at(t_obst - 0.67, stick, 1.0, 0.0, 400)   # move to x~1.8 before obstacle
+    s.at(t_obst + 0.23, stick, -1.0, 0.0, 400)  # return to center after passing
 
 
 def phase1():
@@ -141,6 +170,7 @@ def clean():
     dodge(s, (z0 - (-43)) / 6.0)         # obstacle z=-43 -> t=8.5
     for ze, _g in L1_GAPS:
         s.at(jump_t(ze, z0), hold, J, 120)   # hold spans physics frames so jump registers
+    s.at(2.7, shot, "a57_joy_dodge", lead=0)    # knob deflected right mid-dodge
     s.at(6.5, shot, "a54_w7_g0", lead=0)     # diagnostic: just after gap0
     s.at(12.0, shot, "a54_w7_g1", lead=0)    # diagnostic: just after gap1
     s.at(18.0, shot, "a54_w7_05_midrun", lead=0)
@@ -180,8 +210,10 @@ if __name__ == "__main__":
     elif cmd == "l2":
         l2()
     elif cmd == "next":
-        tap((540, 1270))                 # NEXT LEVEL / START share this position
+        tap(START)                       # NEXT LEVEL / START share this position
     elif cmd == "shot":
         shot(sys.argv[2])
+    for t in _THREADS:
+        t.join(timeout=15)
     with open(BUILD + "\\w7_play_log.txt", "a", encoding="utf-8") as f:
         f.write("\n".join(LOG) + "\n")

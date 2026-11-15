@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## Player: auto-run forward (-Z), touch left/right + jump.
+## Player: auto-run forward (-Z), analog joystick strafe + jump.
 ## Physics constants are MVP-validated (jump range 4.64m) -- do not retune.
 ## Block character + procedural run/jump animation + squash&stretch built in code.
 
@@ -15,8 +15,10 @@ signal jumped
 signal landed
 signal fell
 
-var input_left := false
-var input_right := false
+## Analog stick input from the HUD joystick. x = strafe (-1..1), consumed
+## below. y is already plumbed end-to-end and RESERVED for a future
+## forward/back axis (e.g. speed bias); auto-run owns forward speed today.
+var input_dir := Vector2.ZERO
 var started := false
 var autopilot := false
 var _coyote := 0.0
@@ -146,13 +148,14 @@ func _physics_process(delta: float) -> void:
 		_coyote = 0.0
 		_squash = -0.25
 		jumped.emit()
-	# Auto-run forward, strafe from touch/keys/autopilot
+	# Auto-run forward, analog strafe from joystick/keys/autopilot
 	velocity.z = 0.0 if _ap_brake else -SPEED
-	var dir := 0.0
-	if Input.is_action_pressed("move_left") or input_left:
+	var dir := clampf(input_dir.x, -1.0, 1.0)
+	if Input.is_action_pressed("move_left"):
 		dir -= 1.0
-	if Input.is_action_pressed("move_right") or input_right:
+	if Input.is_action_pressed("move_right"):
 		dir += 1.0
+	dir = clampf(dir, -1.0, 1.0)
 	if autopilot:
 		dir = _ap_dir
 		if not is_on_floor():

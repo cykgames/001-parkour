@@ -1,6 +1,7 @@
 extends CanvasLayer
-## HUD: timer/coins/falls/level, touch buttons, start/pause/finish panels,
-## star rating, best record, red fall flash. All UI built in code.
+## HUD: timer/coins/falls/level, floating joystick + jump button,
+## start/pause/finish panels, star rating, best record, red fall flash.
+## All UI built in code.
 
 signal run_started
 
@@ -27,6 +28,7 @@ var _restart_button: Button
 var _pause_button: Button
 var _pause_panel: ColorRect
 var _flash: ColorRect
+var _joy: Joystick
 
 @onready var player: CharacterBody3D = get_parent().get_node("Player")
 
@@ -55,15 +57,24 @@ func _mk_button(text: String, size: int) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.add_theme_font_size_override("font_size", size)
+	b.add_theme_color_override("font_color", Color(1, 1, 1))
+	b.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	b.add_theme_constant_override("outline_size", 3)
+	# Deep navy body + light rim: readable over bright sky, dark per user request.
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(1, 1, 1, 0.16)
-	sb.set_corner_radius_all(14)
-	sb.set_content_margin_all(10)
+	sb.bg_color = Color(0.07, 0.10, 0.16, 0.82)
+	sb.border_color = Color(0.85, 0.92, 1.0, 0.5)
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(20)
+	sb.set_content_margin_all(14)
 	b.add_theme_stylebox_override("normal", sb)
+	# Pressed = deep electric blue so the tap is visibly acknowledged.
 	var sbp := StyleBoxFlat.new()
-	sbp.bg_color = Color(1, 1, 1, 0.34)
-	sbp.set_corner_radius_all(14)
-	sbp.set_content_margin_all(10)
+	sbp.bg_color = Color(0.10, 0.34, 0.72, 0.95)
+	sbp.border_color = Color(1, 1, 1, 0.85)
+	sbp.set_border_width_all(3)
+	sbp.set_corner_radius_all(20)
+	sbp.set_content_margin_all(14)
 	b.add_theme_stylebox_override("pressed", sbp)
 	b.add_theme_stylebox_override("hover", sbp)
 	return b
@@ -82,15 +93,15 @@ func _build_ui() -> void:
 	var topbg := ColorRect.new()
 	topbg.color = Color(0, 0, 0, 0.35)
 	topbg.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	topbg.offset_bottom = 58.0
+	topbg.offset_bottom = 64.0
 	topbg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(topbg)
 	var bar := HBoxContainer.new()
 	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	bar.offset_left = 18.0
 	bar.offset_right = -18.0
-	bar.offset_top = 8.0
-	bar.offset_bottom = 54.0
+	bar.offset_top = 6.0
+	bar.offset_bottom = 60.0
 	bar.add_theme_constant_override("separation", 26)
 	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(bar)
@@ -102,10 +113,24 @@ func _build_ui() -> void:
 	bar.add_child(_time_label)
 	bar.add_child(_coin_label)
 	bar.add_child(_fall_label)
-	_pause_button = _mk_button("II", 26)
-	_pause_button.custom_minimum_size = Vector2(56, 44)
+	_pause_button = _mk_button("II", 30)
+	_pause_button.custom_minimum_size = Vector2(76, 56)
 	_pause_button.pressed.connect(toggle_pause)
 	bar.add_child(_pause_button)
+
+	# Floating joystick (bottom-left zone): swipe anywhere in the zone to
+	# strafe. Full Vector2 output; Player consumes .x now, .y is reserved
+	# for a future forward/back axis. Added before the center buttons so
+	# START/RESTART stay on top where rects overlap on short viewports.
+	_joy = Joystick.new()
+	_joy.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_joy.offset_left = 0.0
+	_joy.offset_right = 600.0
+	_joy.offset_top = -480.0
+	_joy.offset_bottom = 0.0
+	_joy.home_center = Vector2(190, 250)
+	_joy.activated.connect(_on_stick_pressed)
+	add_child(_joy)
 
 	# Center message / stars / best / buttons
 	_msg_label = _mk_label("", 52)
@@ -123,33 +148,21 @@ func _build_ui() -> void:
 	_centered(_best_label, 0, 40)
 	_best_label.visible = false
 	add_child(_best_label)
-	_center_button = _mk_button("START", 46)
-	_centered(_center_button, 60, 140, 240)
+	_center_button = _mk_button("START", 54)
+	_centered(_center_button, 56, 158, 280)
 	_center_button.pressed.connect(_on_center_pressed)
 	add_child(_center_button)
-	_restart_button = _mk_button("RESTART", 30)
-	_centered(_restart_button, 160, 212, 160)
+	_restart_button = _mk_button("RESTART", 36)
+	_centered(_restart_button, 178, 244, 160)
 	_restart_button.pressed.connect(_on_restart_pressed)
 	_restart_button.visible = false
 	add_child(_restart_button)
 
-	# Touch controls (bottom corners)
-	var tl := _mk_button("L", 60)
-	tl.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	tl.offset_left = 40; tl.offset_right = 190
-	tl.offset_top = -160; tl.offset_bottom = -30
-	tl.button_down.connect(_on_left_down); tl.button_up.connect(_on_left_up)
-	add_child(tl)
-	var tr := _mk_button("R", 60)
-	tr.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	tr.offset_left = 210; tr.offset_right = 360
-	tr.offset_top = -160; tr.offset_bottom = -30
-	tr.button_down.connect(_on_right_down); tr.button_up.connect(_on_right_up)
-	add_child(tr)
-	var tj := _mk_button("J", 60)
+	# Touch controls: jump key (bottom-right) — enlarged hit area, deep navy.
+	var tj := _mk_button("J", 80)
 	tj.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	tj.offset_left = -230; tj.offset_right = -40
-	tj.offset_top = -160; tj.offset_bottom = -30
+	tj.offset_left = -270; tj.offset_right = -30
+	tj.offset_top = -200; tj.offset_bottom = -22
 	tj.button_down.connect(_on_jump_down); tj.button_up.connect(_on_jump_up)
 	add_child(tj)
 
@@ -168,18 +181,18 @@ func _build_ui() -> void:
 	add_child(_pause_panel)
 	var pv := VBoxContainer.new()
 	pv.set_anchors_preset(Control.PRESET_CENTER)
-	pv.offset_left = -160; pv.offset_right = 160
-	pv.offset_top = -120; pv.offset_bottom = 120
-	pv.add_theme_constant_override("separation", 18)
+	pv.offset_left = -190; pv.offset_right = 190
+	pv.offset_top = -130; pv.offset_bottom = 130
+	pv.add_theme_constant_override("separation", 20)
 	pv.alignment = BoxContainer.ALIGNMENT_CENTER
 	_pause_panel.add_child(pv)
 	var pl := _mk_label("PAUSED", 48)
 	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pv.add_child(pl)
-	var resume := _mk_button("RESUME", 36)
+	var resume := _mk_button("RESUME", 40)
 	resume.pressed.connect(toggle_pause)
 	pv.add_child(resume)
-	var prestart := _mk_button("RESTART", 32)
+	var prestart := _mk_button("RESTART", 36)
 	prestart.pressed.connect(_on_restart_pressed)
 	pv.add_child(prestart)
 
@@ -198,6 +211,7 @@ func set_level_info(lname: String, coin_total: int) -> void:
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("pause"):
 		toggle_pause()
+	player.input_dir = _joy.output
 	if running:
 		time += delta
 		_time_label.text = "TIME %05.1f" % time
@@ -244,6 +258,8 @@ func toggle_pause() -> void:
 	get_tree().paused = paused
 	_pause_panel.visible = paused
 	running = not paused
+	if paused:
+		_joy.force_release()
 
 
 func show_finish(stars: int, t: float, pcoins: int, pfalls: int, best: Dictionary, is_last: bool, improved: bool) -> void:
@@ -285,24 +301,9 @@ func _reload() -> void:
 	get_tree().reload_current_scene()
 
 
-func _on_left_down() -> void:
+func _on_stick_pressed() -> void:
 	if not started:
 		start_run()
-	player.input_left = true
-
-
-func _on_left_up() -> void:
-	player.input_left = false
-
-
-func _on_right_down() -> void:
-	if not started:
-		start_run()
-	player.input_right = true
-
-
-func _on_right_up() -> void:
-	player.input_right = false
 
 
 func _on_jump_down() -> void:
