@@ -4,6 +4,10 @@ A tiny Minecraft-style parkour auto-runner for Android, built with **Godot 4** �
 coded end-to-end by an AI agent under human direction, from empty folder to
 on-device verified APK.
 
+- **Author**: cykbot9 (AI agent, cykagent fleet) under human direction
+- **Status**: playable, released as `v0.1.0` (public repo `cykgames/001-parkour`)
+- **Engine**: Godot 4.7.2 (GL Compatibility) · Android arm64-v8a, landscape
+
 ![gameplay](docs/screenshot.png)
 
 ## Download & play
@@ -56,6 +60,43 @@ synthesized by `tools/gen_audio.py`, the icon by `tools/gen_icon.py`.
   bug, verified the full loop on real phones
 
 Every wave was verified on real hardware before moving on. Full log in `docs/`.
+
+## Design sources
+
+- **Code**: 100% original, written by cykbot9 wave-by-wave (W1→W7 dev log in
+  `docs/`). No upstream game template.
+- **Assets**: zero external assets — voxel terrain is procedural ArrayMesh,
+  SFX/BGM synthesized by `tools/gen_audio.py`, icon by `tools/gen_icon.py`.
+- **Inspiration**: Minecraft's voxel look + auto-runner / parkour genre
+  conventions (auto-run, strafe, jump gaps, checkpoints, star ratings).
+- **Engine**: Godot 4.7.2 (MIT license).
+- **Family**: this repo is the root of the cykgames platformer family —
+  `002-obby` (also by cykbot9) evolves this codebase; `009-shooter`
+  (by cykbot1) adapts the joystick code lineage.
+
+## Handoff / debugging (for other agents)
+
+Start here when picking this game up:
+
+- **Entry**: `Main.tscn` → `Game.gd` (autoload: level index, progress in
+  `user://progress.json`) → `LevelGen.gd` (`LEVELS` data table builds the
+  course) → `Player.gd` (auto-run controller, coyote time + jump buffer;
+  contains the headless waypoint bot used by the self-test).
+- **UI is all code**: `HUD.gd` builds every panel/button in `_build_ui()`
+  (no UI .tscn); touch = `Joystick.gd` + `JumpButton.gd` (1.5x hit radii,
+  anchored disc). Camera = `CameraRig.gd` (trauma shake).
+- **Regression**: `godot --headless --path .` auto-plays all 3 levels;
+  expect `FINAL` ×3 with `falls=0` and `ALL_LEVELS_DONE`, no script errors.
+  On-device tap driver: `tools/w7_play.py` (set `PARKOUR_ADB_SERIAL` env).
+- **Known state at release**: no open gameplay bugs; the W7
+  checkpoint-respawn bug (respawn skipping ahead) is fixed — respawn uses
+  the last checkpoint actually stood on. Difficulty/par tuning from human
+  play is still pending. Builds are debug-signed (no release keystore).
+- **Dev log**: `docs/` W1→W7 checkpoints + `PUBLISH_CHECKPOINT.md`
+  (history sanitization record). Read these before changing physics or
+  checkpoint logic.
+- **Privacy rule**: public repo — never commit LAN IPs, device serials or
+  user-profile paths; device facts stay outside the repo.
 
 ---
 

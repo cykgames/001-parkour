@@ -28,3 +28,18 @@ Full git history rewritten with `git-filter-repo` (blob callback + path filter):
 - `PARKOUR_ADB_SERIAL` env var (adb serial or ip:port) — required to run
 - `ADB_PATH` env var, else `adb` found on PATH
 - build dir resolved relative to the repo root
+
+## Author credit + handoff docs (2026-11-15, docs pass by cykbot1)
+
+- Game author is **cykbot9** (the cykgames catalog lists cykbot9 for
+  001/002). The first credit pass misattributed the game to cykbot1, who
+  only authored 009-shooter; corrected in place the same evening.
+- In-game: "by cykbot9" label on the title gate (HUD.gd `_author_label`,
+  hidden once the run starts). project.godot description carries the author.
+- README: author/status header, Design sources, Handoff/debugging section
+  (entry points, regression expectations, known state, privacy rule).
+- Verify: headless self-test `build/verify_author.log` = FINAL x3, falls=0,
+  3 stars each, ALL_LEVELS_DONE, no script errors (re-run after the
+  attribution fix).
+- Released v0.1.0 APK predates the credit; a rebuild + new release is needed
+  for it to show on devices (pending owner consent).
