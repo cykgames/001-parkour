@@ -57,8 +57,13 @@ func _mk_label(text: String, size: int) -> Label:
 
 func _mk_button(text: String, size: int) -> Button:
 	var b := Button.new()
+	_style_button(b, text, size)
+	return b
+
+
+func _style_button(b: Button, text: String, fsize: int) -> void:
 	b.text = text
-	b.add_theme_font_size_override("font_size", size)
+	b.add_theme_font_size_override("font_size", fsize)
 	b.add_theme_color_override("font_color", Color(1, 1, 1))
 	b.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
 	b.add_theme_constant_override("outline_size", 3)
@@ -79,7 +84,6 @@ func _mk_button(text: String, size: int) -> Button:
 	sbp.set_content_margin_all(14)
 	b.add_theme_stylebox_override("pressed", sbp)
 	b.add_theme_stylebox_override("hover", sbp)
-	return b
 
 
 func _centered(ctrl: Control, top: float, bottom: float, half_w: float = 320.0) -> void:
@@ -174,7 +178,9 @@ func _build_ui() -> void:
 
 	# Touch controls: jump key (bottom-right) — same footprint as the
 	# joystick disc (2*RADIUS = 330), circular to match the pad's look.
-	_jump_button = _mk_button("J", 96)
+	# JumpButton enlarges the effective touch radius to 1.5x the graphic.
+	_jump_button = JumpButton.new()
+	_style_button(_jump_button, "J", 96)
 	var jd := Joystick.RADIUS * 2.0
 	_jump_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_jump_button.offset_left = -jd - 30; _jump_button.offset_right = -30
@@ -238,6 +244,29 @@ func _process(delta: float) -> void:
 	_tick += 1
 	if DisplayServer.get_name() == "headless" and _tick % 600 == 0:
 		print("HUDREPORT level=", Game.level_index, " time=", snappedf(time, 0.1), " falls=", falls, " coins=", coins, " pos=", player.position)
+
+
+## Joystick touch routing. The disc is MOUSE_FILTER_IGNORE, so presses/drags
+## over it fall through to here; this tracks the finger ANYWHERE on screen
+## (the disc follows it), which _gui_input could not guarantee once the thumb
+## left the zone. The jump key is a real JumpButton handled by the GUI, so it
+## never reaches here. emulate_touch_from_mouse makes this work on desktop too.
+func _unhandled_input(event: InputEvent) -> void:
+	if paused or finished:
+		return
+	var touch := event as InputEventScreenTouch
+	if touch != null:
+		var lp := _joy.get_global_transform_with_canvas().affine_inverse() * touch.position
+		if touch.pressed:
+			if _joy.touch_index() == -1 and _joy.can_activate(lp):
+				_joy.press_at(lp, touch.index)
+		elif touch.index == _joy.touch_index():
+			_joy.release_touch()
+		return
+	var drag := event as InputEventScreenDrag
+	if drag != null and drag.index == _joy.touch_index():
+		var lp := _joy.get_global_transform_with_canvas().affine_inverse() * drag.position
+		_joy.drag_to(lp)
 
 
 func get_time() -> float:

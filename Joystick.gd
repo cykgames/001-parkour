@@ -1,7 +1,11 @@
 class_name Joystick
 extends Control
-## Floating virtual joystick disc. Touch anywhere inside the zone: the disc
-## re-centers under the finger, drag to steer, release to spring back.
+## Floating virtual joystick disc. HUD drives it from _unhandled_input so the
+## finger is tracked ANYWHERE on screen and never lost when it leaves the zone.
+## Touch in the bottom-left zone (or within GRAB_RADIUS of the disc) grabs it;
+## the disc re-centers under the finger, drag to steer, release to spring back.
+## When the finger outruns the knob's reach the WHOLE disc follows it, so
+## steering keeps full magnitude no matter how far the thumb travels.
 ## Output is a FULL Vector2 (-1..1 per axis, radial deadzone):
 ##   x = strafe (consumed by Player.input_dir.x today)
 ##   y = reserved for a future forward/back axis (not consumed yet)
@@ -14,6 +18,9 @@ const RADIUS := 165.0
 const KNOB_RADIUS := 72.0
 const KNOB_MAX := 108.0
 const DEADZONE := 0.12
+## Effective grab radius = 1.5x the drawn disc: control works even when the
+## finger is outside the graphic (user request).
+const GRAB_RADIUS := RADIUS * 1.5
 
 var output := Vector2.ZERO
 var active := false
@@ -24,7 +31,9 @@ var _touch := -1
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	# Pure drawing surface; HUD owns touch routing via _unhandled_input so the
+	# stick keeps following the finger even far outside this control's rect.
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_center = home_center
 
 
@@ -37,9 +46,56 @@ static func compute_output(d: Vector2) -> Vector2:
 	return d.normalized() * m
 
 
+func touch_index() -> int:
+	return _touch
+
+
+func center() -> Vector2:
+	return _center
+
+
+## True if a press at local point p should grab the stick: inside the
+## bottom-left zone, or within the 1.5x effective radius of the disc.
+func can_activate(p: Vector2) -> bool:
+	var zone := Rect2(Vector2.ZERO, size)
+	return zone.has_point(p) or p.distance_to(_center) <= GRAB_RADIUS
+
+
+func press_at(p: Vector2, index: int) -> void:
+	_touch = index
+	active = true
+	_center = p
+	_knob = Vector2.ZERO
+	output = Vector2.ZERO
+	activated.emit()
+	queue_redraw()
+
+
+func drag_to(p: Vector2) -> void:
+	if not active:
+		return
+	var d := p - _center
+	var dist := d.length()
+	if dist > KNOB_MAX:
+		# Finger outran the knob: slide the whole disc after it so the knob
+		# stays pinned at the rim and steering keeps full magnitude. This is
+		# the "follow" fix -- steering never drops when the thumb goes wide.
+		var dir := d / dist
+		_center = p - dir * KNOB_MAX
+		_knob = dir * KNOB_MAX
+	else:
+		_knob = d
+	output = compute_output(_knob)
+	queue_redraw()
+
+
 func force_release() -> void:
 	if _touch != -1 or active:
 		_release()
+
+
+func release_touch() -> void:
+	_release()
 
 
 func _release() -> void:
@@ -48,40 +104,6 @@ func _release() -> void:
 	output = Vector2.ZERO
 	released.emit()
 	queue_redraw()
-
-
-func _clamp_center(p: Vector2) -> Vector2:
-	var pad := RADIUS + 6.0
-	return Vector2(
-		clampf(p.x, pad, maxf(pad, size.x - pad)),
-		clampf(p.y, pad, maxf(pad, size.y - pad)))
-
-
-func _gui_input(event: InputEvent) -> void:
-	var touch := event as InputEventScreenTouch
-	if touch != null:
-		if touch.pressed and _touch == -1:
-			_touch = touch.index
-			active = true
-			_center = _clamp_center(touch.position)
-			_knob = Vector2.ZERO
-			output = Vector2.ZERO
-			activated.emit()
-			queue_redraw()
-			accept_event()
-		elif not touch.pressed and touch.index == _touch:
-			_release()
-			accept_event()
-		return
-	var drag := event as InputEventScreenDrag
-	if drag != null and drag.index == _touch:
-		var d := drag.position - _center
-		if d.length() > KNOB_MAX:
-			d = d.normalized() * KNOB_MAX
-		_knob = d
-		output = compute_output(d)
-		queue_redraw()
-		accept_event()
 
 
 func _process(delta: float) -> void:

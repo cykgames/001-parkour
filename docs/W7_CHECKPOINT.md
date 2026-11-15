@@ -146,3 +146,28 @@ Three real driver bugs found + fixed while verifying (NOT game bugs):
 - `w7_play.py exit`: tap EXIT(705,1403) -> `build/a57_after_exit.png` = **title gate L1, TIME 000.0, COIN 0/25, FALLS 0, player idle at spawn**. EXIT verified on real device.
 - WiFi ADB rebuilt: root cause of earlier connect timeouts = **`wifi_on=0`** (A57 WiFi switched off, phone on 5G; wlan0 no IPv4). `svc wifi enable` -> DHCP `<LAN_IP>` -> `tcpip 5555` -> `connect` -> USB + WiFi both `device`, `WIFI_ADB_OK`, no auth prompt (keys persisted). USB may be unplugged.
 - Push to `cykgames/001-parkour` still awaiting user consent (local commits only).
+
+## 17. HUD v6 — joystick follows finger + 1.5x effective touch radius (2026-11-15 ~16:40, user: 手指有動 joystick 就要跟隨／有效半徑圖形 1.5 倍／做完 push)
+
+Two touch complaints fixed:
+1. **Joystick must follow the finger** — steering used to drop when the thumb went wide ("激動手超出去它就不轉向，很難玩").
+2. **Effective control radius = 1.5x the graphic** for BOTH jump and direction — taps outside the drawn graphic must still work.
+
+### Implementation
+- `Joystick.gd`: disc is now `MOUSE_FILTER_IGNORE` (pure drawing surface); `HUD._unhandled_input` drives `press_at/drag_to/release_touch`, tracking the finger **anywhere on screen** (press+drag fall through to `_unhandled_input` when no STOP control is under the point — confirmed in Godot `viewport.cpp`). `drag_to`: when the finger outruns `KNOB_MAX` (108) the **whole disc slides after it** (`_center = finger - dir*KNOB_MAX`), knob pinned at the rim, output keeps full magnitude -> steering never drops. `GRAB_RADIUS = RADIUS*1.5` (247.5): a press grabs inside the zone OR within 1.5R of the disc. Removed `_gui_input`/`_clamp_center`.
+- `JumpButton.gd` (new, `class_name JumpButton extends Button`): `_has_point` = circle of radius `RADIUS*1.5` about the key center. Godot hit-test (`Viewport::_gui_find_control_at_pos`) calls `has_point()` with **no rect gate**, so the enlarged area works outside the 330x330 rect. J stays a real Button (pressed visual + button_down/up unchanged).
+- `HUD.gd`: `_mk_button` split into shared `_style_button`; added `_unhandled_input` (joystick routing; canvas->local via `get_global_transform_with_canvas().affine_inverse()`). Jump is GUI-handled so never reaches it. `emulate_touch_from_mouse=true` -> desktop works too.
+
+### Verification
+- `tools/test_joystick.gd` rewritten for the driven API: **JOYSTICK_TEST_PASS** — output math/deadzone/monotonic, can_activate (zone + 1.5R), press/drag/release, **follow** (disc tracks finger to x=792 while output stays x=1), force_release, **JumpButton._has_point bounds** (200/240px hit, 250/260px miss).
+- Headless `build/headless_touch.log`: FINAL x3 34.35/36.89/37.49s, 0 falls, 25/25+27/27+28/28, 3 stars, ALL_LEVELS_DONE, 0 script errors. Physics unchanged.
+- APK `build/godot-parkour.apk` 28,574,003 B exported+signed+verified -> A57 WiFi `<LAN_IP>:5555` `install -r` **Success**.
+- On-device (`tools/touch_test.py`, portrait 1080x2340 @0.84375):
+  - `build/touch_01_follow.png`: press disc home (160,2146), drag to x=700 (beyond the 506px zone) -> disc follows to ~x609, knob pinned right, player strafes right. **Follow confirmed.**
+  - `build/touch_02_release.png`: release -> disc home, knob centered, player runs straight (no stuck strafe). FALLS 1 = deliberate off-path strafe during the follow test; respawned at start.
+  - `build/touch_03_jump_outside.png`: press 180px above J center (outside 139px graphic, inside 209px effective) -> **J pressed-blue** = registered. **1.5x jump confirmed.**
+  - `build/touch_04_jump_miss.png`: press 300px above center (outside effective) -> J dark, player grounded = correctly bounded.
+- Privacy: §16 sanitized (`<DEVICE_SERIAL>`/`<LAN_IP>`); `touch_test.py` made portable (`PARKOUR_ADB_SERIAL` env, same as w7_play.py). Full `origin/main..HEAD` diff scanned: 0 LAN IPs / serials / user paths.
+
+### Push
+- User consented ("做完 push"). Amended the unpushed docs commit to strip device secrets, then pushed HUD v5 + v6 + docs to `cykgames/001-parkour` main.
