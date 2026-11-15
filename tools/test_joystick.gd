@@ -43,11 +43,11 @@ func _ready() -> void:
 	_expect(_joy.can_activate(Vector2(260, 490)), "activate within 1.5R below disc (outside zone)")
 	_expect(not _joy.can_activate(Vector2(260, 520)), "no activate beyond 1.5R outside zone")
 
-	# press_at centers the disc under the finger.
+	# press at home: disc stays at home, zero output (no teleport).
 	_joy.press_at(Vector2(260, 250), 0)
 	_expect(_joy.active and _joy.touch_index() == 0, "press_at activates + tracks index")
 	_expect(_joy.output == Vector2.ZERO, "center press = zero output")
-	_expect(_joy.center().distance_to(Vector2(260, 250)) < 0.001, "disc centers under finger")
+	_expect(_joy.center().distance_to(Vector2(260, 250)) < 0.001, "disc at home on center press")
 
 	# drag within knob travel: disc stays, output scales.
 	_joy.drag_to(Vector2(368, 250))
@@ -58,22 +58,35 @@ func _ready() -> void:
 	_joy.drag_to(Vector2(260, 250))
 	_expect(_joy.output == Vector2.ZERO, "back to center = zero")
 
-	# FOLLOW: finger outruns the knob -> whole disc slides after it, output
-	# keeps full magnitude (the "steering never drops" fix).
-	_joy.drag_to(Vector2(600, 250))
-	_expect(absf(_joy.output.x - 1.0) < 0.001, "follow: far right still x=1")
-	_expect(_joy.center().distance_to(Vector2(492, 250)) < 0.001, "follow: disc moved after finger")
-	_joy.drag_to(Vector2(900, 250))
-	_expect(absf(_joy.output.x - 1.0) < 0.001, "follow: even farther still x=1")
-	_expect(_joy.center().distance_to(Vector2(792, 250)) < 0.001, "follow: disc keeps tracking")
+	# ANCHORED: finger outruns the knob -> steering keeps full magnitude, but
+	# the disc only leans a little (<= MAX_DRIFT) and stays near home; it must
+	# NOT chase the finger across the screen.
+	var home := Vector2(260, 250)
+	_joy.drag_to(Vector2(380, 250))  # 120px right: just past the 108 reach
+	_expect(absf(_joy.output.x - 1.0) < 0.001, "wide: just past reach still x=1")
+	_expect(_joy.center().distance_to(Vector2(272, 250)) < 0.001, "wide: small 12px lean")
+	_joy.drag_to(Vector2(600, 250))  # 340px right: lean caps at MAX_DRIFT
+	_expect(absf(_joy.output.x - 1.0) < 0.001, "wide: far right still x=1")
+	_expect(_joy.center().distance_to(home) <= Joystick.MAX_DRIFT + 0.001, "wide: disc within MAX_DRIFT of home")
+	_expect(_joy.center().distance_to(Vector2(260 + Joystick.MAX_DRIFT, 250)) < 0.001, "wide: lean capped at MAX_DRIFT")
+	_joy.drag_to(Vector2(900, 250))  # 640px right: disc must NOT keep tracking
+	_expect(absf(_joy.output.x - 1.0) < 0.001, "wide: even farther still x=1")
+	_expect(_joy.center().distance_to(Vector2(260 + Joystick.MAX_DRIFT, 250)) < 0.001, "anchored: disc does not chase finger")
 
 	# release zeroes output and clears the tracked index.
 	_joy.release_touch()
 	_expect(not _joy.active and _joy.output == Vector2.ZERO and _joy.touch_index() == -1, "release zeroes output")
 
-	# force_release (used on pause) clears a held stick.
-	_joy.press_at(Vector2(100, 100), 0)
-	_joy.drag_to(Vector2(208, 100))
+	# Far press does NOT teleport the disc: it stays near home, steering full.
+	_joy.press_at(Vector2(590, 470), 0)
+	_expect(_joy.center().distance_to(home) <= Joystick.MAX_DRIFT + 0.001, "far press: disc stays near home (no teleport)")
+	_expect(absf(_joy.output.length() - 1.0) < 0.001, "far press: full steering toward finger")
+	_joy.release_touch()
+
+	# force_release (used on pause) clears a held stick. Re-grab at home and
+	# drag right to full travel (anchored model: coords are home-relative).
+	_joy.press_at(Vector2(260, 250), 0)
+	_joy.drag_to(Vector2(368, 250))
 	_expect(_joy.active and absf(_joy.output.x - 1.0) < 0.001, "re-grab after release")
 	_joy.force_release()
 	_expect(not _joy.active and _joy.output == Vector2.ZERO, "force_release")

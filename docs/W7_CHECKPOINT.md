@@ -171,3 +171,29 @@ Two touch complaints fixed:
 
 ### Push
 - User consented ("做完 push"). Amended the unpushed docs commit to strip device secrets, then pushed HUD v5 + v6 + docs to `cykgames/001-parkour` main.
+
+## 18. HUD v7 — anchored joystick: disc stays home, no finger-chasing (2026-11-15 ~17:35, user: 方向鍵不要跑離本位太遠／手指離開方向鍵控制一樣要生效／跑偏位一些可以，到處跑沒意思)
+
+**Problem with v6:** `drag_to` made the WHOLE disc chase the finger (`_center = finger - dir*KNOB_MAX`). The user's actual intent was "finger accidentally leaves the pad → steering still works", NOT "the pad roams after the finger". A little drift is fine; roaming the screen is pointless.
+
+### Fix — `Joystick.gd`
+- New shared `_steer(p)` used by both `press_at` and `drag_to`:
+  - Finger within `KNOB_MAX` (108) of `home_center`: disc sits at home, knob tracks the finger 1:1 (full analog responsiveness preserved).
+  - Finger beyond reach: knob **pins at the rim pointing at the finger** → output keeps full magnitude (control never drops when the thumb leaves the pad). The disc **leans toward the finger by `min(dist - KNOB_MAX, MAX_DRIFT)`** and stops there.
+- New `const MAX_DRIFT := RADIUS * 0.30` (= 49.5px): the disc can drift a little but never roams. Set to 0 for a fully rigid stick.
+- `press_at` no longer teleports the disc under a far-away finger; it uses the same anchored `_steer`. Release spring-back (`_process`) unchanged. `GRAB_RADIUS = 1.5R` and `JumpButton._has_point` 1.5R unchanged (v6 hit-area fix kept).
+- Steering direction beyond reach is finger-relative-to-home (stable, no wobble as the disc leans).
+
+### Verification
+- `tools/test_joystick.gd` rewritten for the anchored model: **JOYSTICK_TEST_PASS** — 12px lean just past reach; lean caps at MAX_DRIFT; **disc does NOT chase** (stays at home+MAX_DRIFT even at finger x=900); far press = no teleport + full steering; re-grab uses home-relative coords; JumpButton 1.5R bounds unchanged.
+- Headless `build/headless_anchor.log`: FINAL x3 34.35/36.89/37.49s, 0 falls, 25/25+27/27+28/28, 3 stars, ALL_LEVELS_DONE, 0 script errors. Physics unchanged.
+- Rendered REAL Main scene (`tools/shot_hud.gd` updated from stale `_gui_input` to the driven `press_at`/`drag_to` API): `build/hud_joy_wide.png` + numeric `build/shot_anchor.log` — finger at local x=760 (beyond the 600px zone), **disc center (239.5,250), drift=49.5=MAX_DRIFT, output=(1,0)**. Visually: disc stays bottom-left (~19% of 1280 width vs home ~15%), blue knob pinned at right rim, player strafes right. (v6 would have chased the disc to ~x652 / 51% width.)
+- APK `build/godot-parkour.apk` **28,578,099 B** exported + signed (apksigner verify OK, same Godot debug cert) → A57 WiFi `<LAN_IP>:5555` `install -r` **Success**.
+
+### On-device interactive proof — DEFERRED (both phones occupied)
+- A57 foreground = **Discord** (user actively typing on the phone); A54 foreground = **com.kungshami.debug** (gimbal experiment — must not disturb, per MEMORY). No safe device for scripted touch input right now.
+- `install -r` updated A57 with the game in background (Discord untouched, no force-launch/input injected → avoids the §16 contamination). User feels the anchored disc on next game open. Behavior is proven by unit test + headless regression + rendered frame above.
+
+### Push
+- Continuation of the joystick iteration (prior turn "做完 push"). Full `origin/main..HEAD` + working diff privacy-scanned: 0 LAN IPs / serials / user paths. Pushed HUD v7 + docs to `cykgames/001-parkour` main.
+- NOTE: GitHub Release APK is still v0.1.0 (source-only pushes); a v0.2.0 release is pending user request.

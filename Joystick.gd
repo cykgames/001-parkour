@@ -1,11 +1,14 @@
 class_name Joystick
 extends Control
-## Floating virtual joystick disc. HUD drives it from _unhandled_input so the
+## Anchored virtual joystick disc. HUD drives it from _unhandled_input so the
 ## finger is tracked ANYWHERE on screen and never lost when it leaves the zone.
 ## Touch in the bottom-left zone (or within GRAB_RADIUS of the disc) grabs it;
-## the disc re-centers under the finger, drag to steer, release to spring back.
-## When the finger outruns the knob's reach the WHOLE disc follows it, so
-## steering keeps full magnitude no matter how far the thumb travels.
+## drag to steer, release to spring back home.
+## The disc STAYS near home_center -- it does NOT chase the finger. While the
+## finger is within knob reach the knob tracks it 1:1; beyond reach the knob
+## pins at the rim pointing at the finger (full magnitude, so steering still
+## works when the thumb accidentally leaves the pad) and the disc leans toward
+## the finger by at most MAX_DRIFT (a small offset, never roaming the screen).
 ## Output is a FULL Vector2 (-1..1 per axis, radial deadzone):
 ##   x = strafe (consumed by Player.input_dir.x today)
 ##   y = reserved for a future forward/back axis (not consumed yet)
@@ -21,6 +24,10 @@ const DEADZONE := 0.12
 ## Effective grab radius = 1.5x the drawn disc: control works even when the
 ## finger is outside the graphic (user request).
 const GRAB_RADIUS := RADIUS * 1.5
+## The disc is anchored near home. When the thumb outruns the knob's reach the
+## disc may lean toward it, but only up to this small offset -- it never chases
+## the finger across the screen (user: a little drift is fine, roaming is not).
+const MAX_DRIFT := RADIUS * 0.30
 
 var output := Vector2.ZERO
 var active := false
@@ -64,9 +71,7 @@ func can_activate(p: Vector2) -> bool:
 func press_at(p: Vector2, index: int) -> void:
 	_touch = index
 	active = true
-	_center = p
-	_knob = Vector2.ZERO
-	output = Vector2.ZERO
+	_steer(p)
 	activated.emit()
 	queue_redraw()
 
@@ -74,19 +79,27 @@ func press_at(p: Vector2, index: int) -> void:
 func drag_to(p: Vector2) -> void:
 	if not active:
 		return
-	var d := p - _center
-	var dist := d.length()
-	if dist > KNOB_MAX:
-		# Finger outran the knob: slide the whole disc after it so the knob
-		# stays pinned at the rim and steering keeps full magnitude. This is
-		# the "follow" fix -- steering never drops when the thumb goes wide.
-		var dir := d / dist
-		_center = p - dir * KNOB_MAX
-		_knob = dir * KNOB_MAX
-	else:
-		_knob = d
-	output = compute_output(_knob)
+	_steer(p)
 	queue_redraw()
+
+
+## Anchored steering. Within knob reach the disc sits at home and the knob
+## tracks the finger 1:1. Beyond reach the knob pins at the rim pointing at the
+## finger (full magnitude -- control never drops when the thumb leaves the pad)
+## and the disc leans toward the finger by at most MAX_DRIFT, staying near home
+## instead of roaming after it.
+func _steer(p: Vector2) -> void:
+	var d := p - home_center
+	var dist := d.length()
+	if dist <= KNOB_MAX:
+		_center = home_center
+		_knob = d
+	else:
+		var dir := d / dist
+		var drift := minf(dist - KNOB_MAX, MAX_DRIFT)
+		_center = home_center + dir * drift
+		_knob = dir * KNOB_MAX
+	output = compute_output(_knob)
 
 
 func force_release() -> void:

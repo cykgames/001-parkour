@@ -124,8 +124,9 @@ func _build_ui() -> void:
 	_pause_button.pressed.connect(toggle_pause)
 	bar.add_child(_pause_button)
 
-	# Floating joystick (bottom-left zone): swipe anywhere in the zone to
-	# strafe. Full Vector2 output; Player consumes .x now, .y is reserved
+	# Anchored joystick (bottom-left zone): swipe anywhere in the zone to
+	# strafe; the disc stays near home and only leans a little when the thumb
+	# goes wide. Full Vector2 output; Player consumes .x now, .y is reserved
 	# for a future forward/back axis. Added before the center buttons so
 	# START/RESTART stay on top where rects overlap on short viewports.
 	_joy = Joystick.new()
@@ -248,9 +249,10 @@ func _process(delta: float) -> void:
 
 ## Joystick touch routing. The disc is MOUSE_FILTER_IGNORE, so presses/drags
 ## over it fall through to here; this tracks the finger ANYWHERE on screen
-## (the disc follows it), which _gui_input could not guarantee once the thumb
-## left the zone. The jump key is a real JumpButton handled by the GUI, so it
-## never reaches here. emulate_touch_from_mouse makes this work on desktop too.
+## (the disc stays anchored near home while steering follows the finger), which
+## _gui_input could not guarantee once the thumb left the zone. The jump key is
+## a real JumpButton handled by the GUI, so it never reaches here.
+## emulate_touch_from_mouse makes this work on desktop too.
 func _unhandled_input(event: InputEvent) -> void:
 	if paused or finished:
 		return
