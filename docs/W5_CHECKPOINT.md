@@ -1,7 +1,7 @@
 # Godot Parkour W5+W6 — MVP → "human-playable" game checkpoint
 
 Date: 2026-11-15 00:25 (GMT+8)
-Task: 363_7a2be76d. Project: `%USERPROFILE%\projects\godot-parkour` (standalone repo).
+Task: 363_7a2be76d. Project: `%USERPROFILE%\projects\001-parkour` (standalone repo).
 Primary device: **A57** (SM-A576B, WiFi ADB `<LAN_IP>:5555`). A54 untouched (unauthorized, gimbal busy). kungshami_apk untouched.
 
 ## Status: P1–P4 code DONE + headless 3-level validation PASS + APK export/install PASS + on-device engine/logcat clean. On-device gameplay SCREENSHOTS BLOCKED by secure keyguard (needs user to unlock phone).

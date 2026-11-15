@@ -2,7 +2,7 @@
 
 Date: 2026-11-14 23:00 (GMT+8)
 Task: 438_2cb070cc (Godot parkour MVP 60s). Goal: APK installed on device, launches and runs.
-Project: `%USERPROFILE%\projects\godot-parkour` (standalone repo; kungshami_apk untouched).
+Project: `%USERPROFILE%\projects\001-parkour` (standalone repo; kungshami_apk untouched).
 Primary device: **A57** (SM-A576B, WiFi ADB `<LAN_IP>:5555`). A54 deferred — busy with gimbal experiment, left `unauthorized`, untouched. User directive 2026-11-14 23:09: "以A57 為主".
 
 ## Status: 5/5 steps DONE + verified on A57 (2026-11-14 ~23:15).

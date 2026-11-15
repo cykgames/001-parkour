@@ -1,7 +1,7 @@
 # Godot Parkour W7 — A54 on-device verification checkpoint
 
 Date: 2026-11-15 01:35 (GMT+8)
-Task: 910_4493c5c5. Project: `%USERPROFILE%\projects\godot-parkour` (standalone repo, NO remote).
+Task: 910_4493c5c5. Project: `%USERPROFILE%\projects\001-parkour` (standalone repo, NO remote).
 Device: **A54** (SM_A5460). Transport: **WiFi ADB `<LAN_IP>:5555`** (USB `<DEVICE_SERIAL>` also authorized). A57 untouched. kungshami_apk code untouched; A54 gimbal app/data left in place.
 
 ## Status: COMPLETE. Checkpoint skip-ahead bug FIXED + verified on real device. L1 clean run = 0 falls / 25/25 coins / 34.3s / 3 stars / LEVEL CLEAR. L2 CANYON runs on device (movers animate, static gaps 0 falls). Full-session logcat CLEAN (0 crash / 0 ANR / 0 Godot error).
