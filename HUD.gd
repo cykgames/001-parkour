@@ -25,6 +25,8 @@ var _star_label: Label
 var _best_label: Label
 var _center_button: Button
 var _restart_button: Button
+var _exit_button: Button
+var _jump_button: Button
 var _pause_button: Button
 var _pause_panel: ColorRect
 var _flash: ColorRect
@@ -148,29 +150,41 @@ func _build_ui() -> void:
 	_centered(_best_label, 0, 40)
 	_best_label.visible = false
 	add_child(_best_label)
-	_center_button = _mk_button("START", 54)
-	_centered(_center_button, 56, 158, 280)
+	# Finish/start primary button: big thumb target (760x140).
+	_center_button = _mk_button("START", 60)
+	_centered(_center_button, 56, 196, 380)
 	_center_button.pressed.connect(_on_center_pressed)
 	add_child(_center_button)
-	_restart_button = _mk_button("RESTART", 36)
-	_centered(_restart_button, 178, 244, 160)
+	# Finish secondary row: RESTART + EXIT side by side, same height (120),
+	# much taller than the old 66px RESTART. Fits 720p landscape (bottom 336).
+	_restart_button = _mk_button("RESTART", 46)
+	_centered(_restart_button, 216, 336, 185)
+	_restart_button.offset_left -= 195
+	_restart_button.offset_right -= 195
 	_restart_button.pressed.connect(_on_restart_pressed)
 	_restart_button.visible = false
 	add_child(_restart_button)
+	_exit_button = _mk_button("EXIT", 46)
+	_centered(_exit_button, 216, 336, 185)
+	_exit_button.offset_left += 195
+	_exit_button.offset_right += 195
+	_exit_button.pressed.connect(_on_exit_pressed)
+	_exit_button.visible = false
+	add_child(_exit_button)
 
 	# Touch controls: jump key (bottom-right) — same footprint as the
 	# joystick disc (2*RADIUS = 330), circular to match the pad's look.
-	var tj := _mk_button("J", 96)
+	_jump_button = _mk_button("J", 96)
 	var jd := Joystick.RADIUS * 2.0
-	tj.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	tj.offset_left = -jd - 30; tj.offset_right = -30
-	tj.offset_top = -jd - 22; tj.offset_bottom = -22
+	_jump_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_jump_button.offset_left = -jd - 30; _jump_button.offset_right = -30
+	_jump_button.offset_top = -jd - 22; _jump_button.offset_bottom = -22
 	for sn in ["normal", "pressed", "hover"]:
-		var sb: StyleBoxFlat = tj.get_theme_stylebox(sn)
+		var sb: StyleBoxFlat = _jump_button.get_theme_stylebox(sn)
 		sb.set_corner_radius_all(int(Joystick.RADIUS))
 		sb.set_border_width_all(4)
-	tj.button_down.connect(_on_jump_down); tj.button_up.connect(_on_jump_up)
-	add_child(tj)
+	_jump_button.button_down.connect(_on_jump_down); _jump_button.button_up.connect(_on_jump_up)
+	add_child(_jump_button)
 
 	# Red fall flash (full screen, ignored by mouse)
 	_flash = ColorRect.new()
@@ -285,6 +299,11 @@ func show_finish(stars: int, t: float, pcoins: int, pfalls: int, best: Dictionar
 	_center_button.text = "PLAY AGAIN" if is_last else "NEXT LEVEL"
 	_center_button.visible = true
 	_restart_button.visible = true
+	_exit_button.visible = true
+	# Touch controls are useless on the finish screen; hiding them also
+	# keeps the big EXIT button clear of J on short (landscape) viewports.
+	_joy.visible = false
+	_jump_button.visible = false
 
 
 func _on_center_pressed() -> void:
@@ -299,6 +318,12 @@ func _on_center_pressed() -> void:
 
 
 func _on_restart_pressed() -> void:
+	_reload()
+
+
+func _on_exit_pressed() -> void:
+	# Quit to the title gate (TAP TO START) at level 1.
+	Game.level_index = 0
 	_reload()
 
 

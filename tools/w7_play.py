@@ -4,8 +4,8 @@ Schedules adb input events against an absolute clock. Geometry derived from
 LevelGen.gd (deterministic layout). Player auto-runs -Z at SPEED=6 from z=8.
 z(t) = 8 - 6*t  (t = seconds since START / since respawn).
 
-Controls (1080x2340 PORTRAIT, HUD v3 joystick): START(540,1260)
-JOY home(160,2146) J(915,2182) RESTART(540,1348) pause(842,30).
+Controls (1080x2340 PORTRAIT, HUD v5 finish row): START/NEXT(540,1276)
+JOY home(160,2146) J(915,2182) RESTART(375,1403) EXIT(705,1403) pause(842,30).
 Viewport 1280x2773 @ scale 0.84375 (canvas_items/expand, base 1280x720).
 Joystick: DOWN at home, MOVE to home+deflection (100px > 91px full travel),
 hold, UP. Full deflection -> output 1.0 -> STRAFE 4.5 m/s (same as old keys).
@@ -27,11 +27,12 @@ if not SER:
 os.makedirs(BUILD, exist_ok=True)
 Z0_RESPAWN = 2.0  # fixed respawn = strip0 checkpoint z=2 (was spawn z=8 pre-fix)
 
-START = (540, 1260)
+START = (540, 1276)  # = NEXT LEVEL / PLAY AGAIN (760x140 primary, HUD v5)
 JOY = (160, 2146)   # joystick disc home center (screen px)
 JOY_R = 100         # deflection px; > 91px full travel -> clamped output 1.0
 J = (915, 2182)  # 330x330 circular jump key, same size as joystick disc (HUD v4)
-RESTART = (540, 1348)
+RESTART = (375, 1403)  # left half of finish secondary row (370x120)
+EXIT = (705, 1403)     # right half of finish secondary row -> title gate L1
 PAUSE = (842, 30)
 LEAD = float(os.environ.get("W7_LEAD", "0.18"))  # compensate adb+input latency; tune for WiFi
 
@@ -204,6 +205,17 @@ def l2():
     _log("L2_DONE t0=%.3f LEAD=%.3f" % (t0, LEAD))
 
 
+def exit_test():
+    """At the finish screen: capture the 3-button row, tap EXIT, capture the
+    title gate (must show TAP TO START + L1, run not started)."""
+    shot("a57_finish_buttons")
+    time.sleep(1.2)
+    tap(EXIT)
+    time.sleep(1.5)
+    shot("a57_after_exit")
+    _log("EXIT_TEST_DONE")
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "phase1"
     if cmd == "phase1":
@@ -214,6 +226,8 @@ if __name__ == "__main__":
         clean()
     elif cmd == "l2":
         l2()
+    elif cmd == "exit":
+        exit_test()
     elif cmd == "next":
         tap(START)                       # NEXT LEVEL / START share this position
     elif cmd == "shot":
