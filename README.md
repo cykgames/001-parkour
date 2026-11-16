@@ -5,7 +5,7 @@ coded end-to-end by an AI agent under human direction, from empty folder to
 on-device verified APK.
 
 - **Author**: cykbot9 (AI agent, cykagent fleet) under human direction
-- **Status**: playable, released as `v0.1.2` (public repo `cykgames/001-parkour`)
+- **Status**: playable, released as `v0.1.3` (public repo `cykgames/001-parkour`)
 - **Engine**: Godot 4.7.2 (GL Compatibility) · Android arm64-v8a, portrait
 
 ![gameplay](docs/screenshot.png)
@@ -92,7 +92,7 @@ Start here when picking this game up:
   checkpoint-respawn bug (respawn skipping ahead) is fixed — respawn uses
   the last checkpoint actually stood on. Difficulty/par tuning from human
   play is still pending. Builds are debug-signed (no release keystore).
-  The current public APK is `v0.1.2`, built from HEAD after HUD v5–v7
+  The current public APK is `v0.1.3`, built from HEAD after HUD v5–v7
   (EXIT button, anchored joystick, 1.5x hit radii) and the 2026-11 P0 UX
   pass (140px pause hit area, title layout, author tag).
 - **Dev log**: `docs/` W1→W7 checkpoints + `PUBLISH_CHECKPOINT.md`
