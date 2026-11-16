@@ -96,6 +96,9 @@ func _centered(ctrl: Control, top: float, bottom: float, half_w: float = 320.0) 
 
 
 func _build_ui() -> void:
+	# CanvasLayer is not a CanvasItem: query the viewport rect directly.
+	var vp_size := get_viewport().get_visible_rect().size
+	var portrait := vp_size.y > vp_size.x
 	# Top bar background + labels
 	var topbg := ColorRect.new()
 	topbg.color = Color(0, 0, 0, 0.35)
@@ -120,10 +123,43 @@ func _build_ui() -> void:
 	bar.add_child(_time_label)
 	bar.add_child(_coin_label)
 	bar.add_child(_fall_label)
-	_pause_button = _mk_button("II", 30)
-	_pause_button.custom_minimum_size = Vector2(76, 56)
+	# Pause: the visible chip stays bar-sized, but the real touch target is
+	# an invisible 166x166 button in the top-right corner (>=120 device px
+	# at the 0.84375 portrait scale). The chip is a child panel, so a tap
+	# anywhere in the big rect toggles pause.
+	_pause_button = Button.new()
+	_pause_button.focus_mode = Control.FOCUS_NONE
+	for sn in ["normal", "hover", "pressed", "focus", "disabled"]:
+		_pause_button.add_theme_stylebox_override(sn, StyleBoxEmpty.new())
+	_pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_pause_button.offset_left = -166.0
+	_pause_button.offset_top = 0.0
+	_pause_button.offset_right = 0.0
+	_pause_button.offset_bottom = 166.0
 	_pause_button.pressed.connect(toggle_pause)
-	bar.add_child(_pause_button)
+	add_child(_pause_button)
+	var pause_face := Panel.new()
+	pause_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pfs := StyleBoxFlat.new()
+	pfs.bg_color = Color(0.07, 0.10, 0.16, 0.82)
+	pfs.border_color = Color(0.85, 0.92, 1.0, 0.5)
+	pfs.set_border_width_all(3)
+	pfs.set_corner_radius_all(20)
+	pause_face.add_theme_stylebox_override("panel", pfs)
+	pause_face.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	pause_face.offset_left = -94.0
+	pause_face.offset_top = 6.0
+	pause_face.offset_right = -18.0
+	pause_face.offset_bottom = 62.0
+	_pause_button.add_child(pause_face)
+	var pause_glyph := _mk_label("II", 30)
+	pause_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pause_glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pause_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pause_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	pause_face.add_child(pause_glyph)
+	_pause_button.button_down.connect(func() -> void: pause_face.modulate = Color(0.55, 0.85, 1.7))
+	_pause_button.button_up.connect(func() -> void: pause_face.modulate = Color.WHITE)
 
 	# Anchored joystick (bottom-left zone): swipe anywhere in the zone to
 	# strafe; the disc stays near home and only leans a little when the thumb
@@ -156,28 +192,48 @@ func _build_ui() -> void:
 	_centered(_best_label, 0, 40)
 	_best_label.visible = false
 	add_child(_best_label)
-	# Finish/start primary button: big thumb target (760x140).
+	# Finish/start primary button: big thumb target (760x150).
 	_center_button = _mk_button("START", 60)
-	_centered(_center_button, 56, 196, 380)
+	if portrait:
+		# Portrait title: the character stands at ~57-74% screen height, so
+		# the old mid-screen START bar covered it. Park START in the free
+		# band above the touch controls (thumb zone, ~77-82% height).
+		_center_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		_center_button.offset_left = -380.0
+		_center_button.offset_right = 380.0
+		_center_button.offset_top = -640.0
+		_center_button.offset_bottom = -490.0
+	else:
+		_centered(_center_button, 56, 196, 380)
 	_center_button.pressed.connect(_on_center_pressed)
 	add_child(_center_button)
-	# Author credit on the title gate; hidden once the run starts.
-	_author_label = _mk_label("by cykbot9", 24)
-	_author_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_author_label.add_theme_color_override("font_color", Color(0.75, 0.8, 0.9))
-	_centered(_author_label, 210, 250)
+	# Author credit: small corner tag below the HUD bar, never on the
+	# character (the old centered tag rendered on its head).
+	_author_label = _mk_label("by cykbot9", 18)
+	_author_label.add_theme_color_override("font_color", Color(0.75, 0.8, 0.9, 0.6))
+	_author_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_author_label.offset_left = 18.0
+	_author_label.offset_top = 74.0
+	_author_label.offset_right = 320.0
+	_author_label.offset_bottom = 104.0
 	add_child(_author_label)
-	# Finish secondary row: RESTART + EXIT side by side, same height (120),
-	# much taller than the old 66px RESTART. Fits 720p landscape (bottom 336).
+	# Finish secondary row: RESTART + EXIT side by side, same height (150).
+	# Landscape keeps the old bottom row; portrait tucks it just under the
+	# best-time line so it never covers the character either.
+	var row_top := 216.0
+	var row_bottom := 336.0
+	if portrait:
+		row_top = 48.0
+		row_bottom = 198.0
 	_restart_button = _mk_button("RESTART", 46)
-	_centered(_restart_button, 216, 336, 185)
+	_centered(_restart_button, row_top, row_bottom, 185)
 	_restart_button.offset_left -= 195
 	_restart_button.offset_right -= 195
 	_restart_button.pressed.connect(_on_restart_pressed)
 	_restart_button.visible = false
 	add_child(_restart_button)
 	_exit_button = _mk_button("EXIT", 46)
-	_centered(_exit_button, 216, 336, 185)
+	_centered(_exit_button, row_top, row_bottom, 185)
 	_exit_button.offset_left += 195
 	_exit_button.offset_right += 195
 	_exit_button.pressed.connect(_on_exit_pressed)
