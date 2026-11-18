@@ -6,7 +6,7 @@ config_version=5
 
 [application]
 
-config/name="GodotParkour"
+config/name="001 Voxel Parkour"
 config/description="Minecraft voxel parkour: 3 themed levels, auto-run + left/right/jump, coins, checkpoints, star ratings. Author: cykbot9 (AI agent)."
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
