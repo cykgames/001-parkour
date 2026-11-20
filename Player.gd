@@ -94,7 +94,9 @@ func _build_visual() -> void:
 	# Head + hair + face (faces -Z)
 	_visual.add_child(_box(Vector3(0.46, 0.46, 0.46), skin, Vector3(0, 1.33, 0)))
 	_visual.add_child(_box(Vector3(0.48, 0.14, 0.48), hair, Vector3(0, 1.52, 0)))
-	_visual.add_child(_box(Vector3(0.48, 0.10, 0.10), hair, Vector3(0, 1.44, 0.20)))
+	# Full hair back panel: from the chase cam the bare skin back of the head
+	# read as a featureless face (looked like the runner faced backwards).
+	_visual.add_child(_box(Vector3(0.48, 0.36, 0.10), hair, Vector3(0, 1.38, 0.20)))
 	_visual.add_child(_box(Vector3(0.09, 0.09, 0.02), Color(0.12, 0.12, 0.2), Vector3(-0.10, 1.36, -0.235)))
 	_visual.add_child(_box(Vector3(0.09, 0.09, 0.02), Color(0.12, 0.12, 0.2), Vector3(0.10, 1.36, -0.235)))
 
